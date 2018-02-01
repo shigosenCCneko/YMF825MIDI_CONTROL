@@ -103,7 +103,7 @@ uint16_t flash_squ = 0;
 
 //char mul2_top_channel;
 char bank = 0;
-char sysex_mes[40];
+char sysex_mes[65];
 int sysx_mes_pos = 0;
 
 char send_cnt = 0;
@@ -392,16 +392,10 @@ MIDI_EventPacket_t ReceivedMIDIEvent;
 							}
 						}else{
 							note_on(ch,ch,i,j,midi_ch[ch].voice_no);
-						
-						
 						}
-				
-				
-					
 				}
-			
-				
 			}
+			
 			if ((ReceivedMIDIEvent.Event == MIDI_EVENT(0, MIDI_COMMAND_NOTE_OFF))){
 				//ノートオフ
 				ch = ReceivedMIDIEvent.Data1 & 0x0f;
@@ -411,69 +405,167 @@ MIDI_EventPacket_t ReceivedMIDIEvent;
 			}
 			
 	
+	
+	
+	
+	
+	
+				if((ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_START_3BYTE))){
+					//えくるしーぶメッセージ
 			
-			if((ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_START_3BYTE))){		
-				//えくるしーぶメッセージ
-				// message 
-				// 0xf0  dat1,dat2,dat3,dat4 0xf7
-				i = ReceivedMIDIEvent.Data1;
-				if(i == 0xf0){
-					sysex_mes[0] = i;
-					sysex_mes[1] = ReceivedMIDIEvent.Data2;
-					sysex_mes[2] = ReceivedMIDIEvent.Data3;
-				}
-			}
-			
-			
-
-			if((ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_END_1BYTE)
-			||  ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_END_2BYTE)
-			||  ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_END_3BYTE))){
-				sysex_mes[3] = ReceivedMIDIEvent.Data1;
-				sysex_mes[4] = ReceivedMIDIEvent.Data2;
-				sysex_mes[5] = ReceivedMIDIEvent.Data3;
-				ch = sysex_mes[1];
-				i = sysex_mes[2];
-				j = sysex_mes[3];
-				k = sysex_mes[4];
-				
-				if(sysex_mes[0] == 0xf0){
+					// 0xf0        0xf7
+					
+					if(ReceivedMIDIEvent.Data1 == 0xf0){
+						sysx_mes_pos = 0;
+					}
+					
+					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data1;
+					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data2;
+					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data3;
+					
+					}else if((ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_3BYTE))){
+					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data1;
+					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data2;
+					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data3;
+					
+					
+				}else 	if((ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_END_1BYTE)
+				||  ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_END_2BYTE)
+				||  ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_END_3BYTE))){
+					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data1;
+					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data2;
+					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data3;
 				
 					
-					switch(j){ //Type
-						case Atck:
+					if((sysex_mes[0] == 0xf0)&& (sysex_mes[1] == 0x43) && (sysex_mes[2] == 0x7f) &&
+						(sysex_mes[3] == 0x02) && (sysex_mes[4] == 0x00) && (sysex_mes[5]==0x00)){
+							
+						adr = (sysex_mes[6] & 0x0f) * 30; //tone_reg top adr of tone no
 						
-						break;
+						a = sysex_mes[7];	//voice common
+						tone_reg[adr+0] = (a & 0x60) >> 5;
+						tone_reg[adr+1] = (a & 0x18) << 3;
+						tone_reg[adr+1] |= (a & 0x07);
+						c = 8;
+						for(j =0;j<4;j++){
+							f = j * 7 + adr;
+							a = sysex_mes[c++];				//key control
+							tone_reg[f+8] = (a & 0x70) >> 4;	//8 first
+							tone_reg[f+2] = (a & 0x08);		//2 first
+							tone_reg[f+2] |= (a & 0x04) >> 2;	
+							tone_reg[f+5] = (a & 0x03);		//5 first
+							
+							a = sysex_mes[c++];				//Attck Rate
+							tone_reg[f+4] = (a & 0x0f) << 4;	//4 first
+							
+							a = sysex_mes[c++];				//Decay Rate
+							tone_reg[f+3] = (a & 0x0f);		//3 first
+							
+							a = sysex_mes[c++];				//Sustain Rate
+							tone_reg[f+2] |= (a & 0x0f) <<4;
+							
+							a =  sysex_mes[c++];			//Release Rate
+							tone_reg[f+3] |= (a & 0x0f) <<4;
+							
+							a =  sysex_mes[c++];			//Sustain Level
+							tone_reg[f+4] |= (a & 0x0f);	
+							
+							a =  sysex_mes[c++];			//Total Level
+							tone_reg[f+5] |= (a & 0x3f) << 2;
+							
+							a =  sysex_mes[c++];			//Modulation
+							tone_reg[f+6] = a;				//6 first
+							
+							a =  sysex_mes[c++];			//Pitch
+							tone_reg[f+7] = (a & 0x0f)<<4;	//7 first
+							tone_reg[f+7] |= (a & 0x70) >> 4;
+							
+							a =  sysex_mes[c++];			//Wave Shape
+							tone_reg[f+8] |= (a & 0x1f)<<3;
 						
-						case Decy:
-						
-						break;
-						
-						case Sus:
-											
-						break;
-						
-						case Rel:
-						
-						break;
-						
-						case Mul:
-						
-						break;
-						
-						case Tlv:
-						
-						break;
-						
-						case Ksl:
-						
-						break;
-						
-						 
+							
+							
+						}
+						write_burst();
+
 					}
+					
 				}
+				
+				
+				
+	
+	
+	
+	
+	
+	
+	
+	
+	
 			
-			}
+			//if((ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_START_3BYTE))){		
+				////えくるしーぶメッセージ
+				//// message 
+				//// 0xf0  dat1,dat2,dat3,dat4 0xf7
+				//i = ReceivedMIDIEvent.Data1;
+				//if(i == 0xf0){
+					//sysex_mes[0] = i;
+					//sysex_mes[1] = ReceivedMIDIEvent.Data2;
+					//sysex_mes[2] = ReceivedMIDIEvent.Data3;
+				//}
+			//}
+			//
+			//
+//
+			//if((ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_END_1BYTE)
+			//||  ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_END_2BYTE)
+			//||  ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_END_3BYTE))){
+				//sysex_mes[3] = ReceivedMIDIEvent.Data1;
+				//sysex_mes[4] = ReceivedMIDIEvent.Data2;
+				//sysex_mes[5] = ReceivedMIDIEvent.Data3;
+				//ch = sysex_mes[1];
+				//i = sysex_mes[2];
+				//j = sysex_mes[3];
+				//k = sysex_mes[4];
+				//
+				//if(sysex_mes[0] == 0xf0){
+				//
+					//
+					//switch(j){ //Type
+						//case Atck:
+						//
+						//break;
+						//
+						//case Decy:
+						//
+						//break;
+						//
+						//case Sus:
+											//
+						//break;
+						//
+						//case Rel:
+						//
+						//break;
+						//
+						//case Mul:
+						//
+						//break;
+						//
+						//case Tlv:
+						//
+						//break;
+						//
+						//case Ksl:
+						//
+						//break;
+						//
+						 //
+					//}
+				//}
+			//
+			//}
 			
 			
 			/* プログラムチェンジ */
@@ -1087,6 +1179,8 @@ if_s_write(0x1b,0x00);
 
 		
 	for(i= 0;i <16;i++){
+		if_s_write(0x0b,i);			//固定値は先に書きこんでおく。
+		if_s_write(0x14,0);
 		tone_reg[(30*i)] = 0x01;	//BO
 		tone_reg[(30*i)+1] =0x83;	//LFO,ALG
 		
