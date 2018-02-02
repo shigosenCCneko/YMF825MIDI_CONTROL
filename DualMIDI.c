@@ -119,6 +119,7 @@ void note_off(char);
 void note_on(uint8_t,uint8_t ,uint8_t ,uint8_t ,uint8_t);
 
 void pitch_wheel_change(char ,char  ,char );
+void startup_sound(void);
 
 
 
@@ -233,6 +234,8 @@ MIDI_EventPacket_t ReceivedMIDIEvent;
 		
 		while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent))
 		{
+			
+			
 			
 			
 			if((ReceivedMIDIEvent.Event == MIDI_EVENT(1,MIDI_COMMAND_SYSEX_START_3BYTE))){
@@ -679,6 +682,12 @@ MIDI_EventPacket_t ReceivedMIDIEvent;
 					}
 				}
 				
+				
+				if(i == 121){	//リセットオールコントローラ
+				
+					setChannelDefault();
+					
+				}
 
 				if(i == 76){  // モジュレーションpitch
 				//j = j >>1;
@@ -822,6 +831,7 @@ _delay_ms(50);
 _delay_ms(501);
 	reset_ymf825();
 _delay_ms(100);
+	startup_sound();
 	
 	setChannelDefault();
 }
@@ -1220,8 +1230,14 @@ if_s_write(0x1b,0x00);
 	}
 	
 	write_burst();
-	_delay_ms(50);
 	
+
+
+	
+}
+
+void startup_sound(void){
+	_delay_ms(50);
 	keyon(0x1c,0x11);
 	_delay_ms(30);
 	keyoff();
@@ -1241,9 +1257,8 @@ if_s_write(0x1b,0x00);
 	_delay_ms(30);
 	keyoff();
 	_delay_ms(10);
-		
-		
 	
+		
 }
 
 void usart_spi_init(){
