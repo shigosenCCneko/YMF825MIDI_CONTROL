@@ -9,6 +9,14 @@
 
 使用方？
 
+ymf825.propertiesファイルで入出力のMIDIデバイス名を指定します。
+プロパティファイルは実行パスに置いてください。
+
+
+	midiInDeviceName=MIDIIN2 (LUFA Dual MIDI Demo)
+	midiOutDeviceName=MIDIOUT2 (LUFA Dual MIDI Demo)
+
+
 上部のプルダウンリストからGM準拠の音色？がロード出来ます。
 
 
@@ -46,7 +54,9 @@
 	waveSave:	カレント音色をファイルへ保存
 	waveload:	カレント音色へファイルから読み込み
 
-	Write to text: 下部テキストエリアへカレント音色を１０進ベタcsv形式で表示
+	Write to text: 下部テキストエリアへカレント音色を(１０進ベタcsv、YAMAHA SysEX,DominoSysEX形式で)表示
+							左ラジオボタンで選択。
+
 	Read from Text: 下部テキストエリアからカレント音色へ読み込み
 
 EEPROMエリア
@@ -65,6 +75,8 @@ OPL3用にHID－MIDIの複合デバイスにして改造し、YM2151とDual用に書き換え
 ソースがグダグダでとても恥ずかしくて公開出来ません。
 waveイメージなんかフリーハンドで書いたもんですから
 いつか綺麗に書き直したら公開するかも。
+
+2018/2/4 MIDIデバイスをプロパティファイルで指定するよう変更。
 
 
 
