@@ -101,7 +101,7 @@ uint8_t hid_res_mode = 0;
 uint16_t flash_squ = 0;
 
 
-//char mul2_top_channel;
+
 char bank = 0;
 char sysex_mes[65];
 int sysx_mes_pos = 0;
@@ -166,30 +166,6 @@ USB_ClassInfo_MIDI_Device_t Keyboard_MIDI_Interface =
 
 
 
-/** Buffer to hold the previously generated HID report, for comparison purposes inside the HID class driver. */
-//static uint8_t PrevHIDReportBuffer[GENERIC_REPORT_SIZE];
-
-
-
-/** LUFA HID Class driver interface configuration and state information. This structure is
- *  passed to all HID Class driver functions, so that multiple instances of the same class
- *  within a device can be differentiated from one another.
- */
-//USB_ClassInfo_HID_Device_t Generic_HID_Interface =
-	//{
-		//.Config =
-			//{
-				//.InterfaceNumber              = INTERFACE_ID_GenericHID,
-				//.ReportINEndpoint             =
-					//{
-						//.Address              = GENERIC_IN_EPADDR,
-						//.Size                 = GENERIC_EPSIZE,
-						//.Banks                = 1,
-					//},
-				//.PrevReportINBuffer           = PrevHIDReportBuffer,
-				//.PrevReportINBufferSize       = sizeof(PrevHIDReportBuffer),
-			//},
-	//};
 
 
 
@@ -235,189 +211,405 @@ MIDI_EventPacket_t ReceivedMIDIEvent;
 		while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent))
 		{
 			
-			
-			
-			
-			if((ReceivedMIDIEvent.Event == MIDI_EVENT(1,MIDI_COMMAND_SYSEX_START_3BYTE))){
-				//えくるしーぶメッセージ
-				// message
-				// 0xf0  channel, operator No, Type, value 0xf7
-			
-				if(ReceivedMIDIEvent.Data1 == 0xf0){
-					sysx_mes_pos = 0;
-				}
-				
-				sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data1;
-				sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data2;
-				sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data3;
-				
-			}else if((ReceivedMIDIEvent.Event == MIDI_EVENT(1,MIDI_COMMAND_SYSEX_3BYTE))){
-				sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data1;
-				sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data2;
-				sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data3;				
-				
-									
-			}else 	if((ReceivedMIDIEvent.Event == MIDI_EVENT(1,MIDI_COMMAND_SYSEX_END_1BYTE)
-			||  ReceivedMIDIEvent.Event == MIDI_EVENT(1,MIDI_COMMAND_SYSEX_END_2BYTE)
-			||  ReceivedMIDIEvent.Event == MIDI_EVENT(1,MIDI_COMMAND_SYSEX_END_3BYTE))){
-				sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data1;
-				sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data2;
-				sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data3;
+			switch(ReceivedMIDIEvent.Event){
 
-			Data[0] = ((sysex_mes[1] & 0x0f)<<4) | (sysex_mes[2] & 0x0f);
-			Data[1] = ((sysex_mes[3] & 0x0f)<<4) | (sysex_mes[4] & 0x0f);
-			Data[2] = ((sysex_mes[5] & 0x0f)<<4) | (sysex_mes[6] & 0x0f);			
-			Data[3] = ((sysex_mes[7] & 0x0f)<<4) | (sysex_mes[8] & 0x0f);
+				case	MIDI_EVENT(1,MIDI_COMMAND_SYSEX_START_3BYTE):	//えくるしーぶメッセージ
+
+					if(ReceivedMIDIEvent.Data1 == 0xf0){
+						sysx_mes_pos = 0;
+					}
+					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data1;
+					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data2;
+					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data3;
+					break;
+					
+				case 	MIDI_EVENT(1,MIDI_COMMAND_SYSEX_3BYTE):
+
+					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data1;
+					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data2;
+					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data3;				
+					break;
+					
+				case	MIDI_EVENT(1,MIDI_COMMAND_SYSEX_END_1BYTE):
+				case	MIDI_EVENT(1,MIDI_COMMAND_SYSEX_END_2BYTE):
+				case	MIDI_EVENT(1,MIDI_COMMAND_SYSEX_END_3BYTE):
+
+					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data1;
+					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data2;
+					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data3;
+
+					Data[0] = ((sysex_mes[1] & 0x0f)<<4) | (sysex_mes[2] & 0x0f);
+					Data[1] = ((sysex_mes[3] & 0x0f)<<4) | (sysex_mes[4] & 0x0f);
+					Data[2] = ((sysex_mes[5] & 0x0f)<<4) | (sysex_mes[6] & 0x0f);			
+					Data[3] = ((sysex_mes[7] & 0x0f)<<4) | (sysex_mes[8] & 0x0f);
 			
-			if(sysex_mes[0] == 0xf0){
+					if(sysex_mes[0] == 0xf0){
 			
-				switch(Data[0]){
+						switch(Data[0]){
 	
-				case 0:  // Reset
+						case 0:  // Reset
 			
-					switch(Data[3]){
-						case 0:
-							reset_ymf825();
-							bank = 1;
+							switch(Data[3]){
+								case 0:
+									reset_ymf825();
+									bank = 1;
 												
-							mem_reset();
+									mem_reset();
+									break;
+								default:
+									break;
+							}
 							break;
+			
+						case 1:		// Write Data to Register
+			
+							if(Data[1]==2){
+								if_s_write(Data[2],Data[3]);
+							}
+							break;
+						case 2:		// set pori mode midi channel 1 and 4
+			
+								if(Data[1]== 0){
+									play_mode = 0;
+					
+									setChannelDefault();
+									mem_reset();
+				
+								}else if(Data[1] ==1){
+									play_mode = 1;
+									for(a = 0;a<16;a++){
+										midi_ch[a].voice_no = a;
+							
+									}
+									setChannelDefault();
+									mem_reset();				
+													
+								}else if(Data[1] == 3){
+									play_mode = 3;
+									MAX_3MUL = 8;
+									setChannelDefault();
+									mem_reset();
+								}
+							break;
+						case 3: // 4or2 operation select  Data[1]:channel  Data[2]: 2 or 4
+							break;
+					
+						case 4: // algorithm select  num [0-3]4op [0-1]2op
+							ch = (int)Data[1];
+							c = Data[2];
+							break;
+			
+						case 5: // set tone data  EEPROM YMF262 ;
+							ch = (int)Data[1];
+							f = (int)Data[2];
+							c = Data[3];
+							ch = ch << 5;
+							f = f + ch;
+			
+							eeprom_busy_wait();
+							eeprom_write_byte((uint8_t *)f,c);
+							break;
+					
+						case 6:	//ready read tone data EEPROM
+							send_cnt = 30;
+							eeprom_p_midi = Data[1] << 5;
+							break;
+				
+						case 9: // burst write tone data
+							write_burst();
+							break;	
+					
+						case 10: //write tone array and write burst
+							tone_reg[(Data[1]*30)+Data[2]] = Data[3];
+							write_burst();
+							break;	
+					
+						case 11: //write tone array only
+							tone_reg[(Data[1]*30+Data[2])] = Data[3];
+							break;
+		
 						default:
 							break;
-					}
-					break;
-			
-				case 1:		// Write Data to Register
-			
-					if(Data[1]==2){
-						if_s_write(Data[2],Data[3]);
-					}
-					break;
-				case 2:		// set pori mode midi channel 1 and 4
-			
-						if(Data[1]== 0){
-							play_mode = 0;
-					
-							setChannelDefault();
-							mem_reset();
-				
-						}else if(Data[1] ==1){
-							play_mode = 1;
-							for(a = 0;a<16;a++){
-								midi_ch[a].voice_no = a;
-							
-							}
-							setChannelDefault();
-							mem_reset();				
-													
-						}else if(Data[1] == 3){
-							play_mode = 3;
-							MAX_3MUL = 8;
-							setChannelDefault();
-							mem_reset();
 						}
-					break;
-				case 3: // 4or2 operation select  Data[1]:channel  Data[2]: 2 or 4
-					break;
-					
-				case 4: // algorithm select  num [0-3]4op [0-1]2op
-					ch = (int)Data[1];
-					c = Data[2];
-					break;
-			
-				case 5: // set tone data  EEPROM YMF262 ;
-					ch = (int)Data[1];
-					f = (int)Data[2];
-					c = Data[3];
-					ch = ch << 5;
-					f = f + ch;
-			
-					eeprom_busy_wait();
-					eeprom_write_byte((uint8_t *)f,c);
-					break;
-					
-				case 6:	//ready read tone data EEPROM
-					send_cnt = 30;
-					eeprom_p_midi = Data[1] << 5;
-					break;
-				
-				case 9: // burst write tone data
-					write_burst();
-					break;	
-					
-				case 10: //write tone array and write burst
-					tone_reg[(Data[1]*30)+Data[2]] = Data[3];
-					write_burst();
-					break;	
-					
-				case 11: //write tone array only
-					tone_reg[(Data[1]*30+Data[2])] = Data[3];
-					break;
-		
-				default:
-					break;
-				}
 
-			}
+					}
+					break;
+
 			
-		}
-			
-			
-		
-			//if ((ReceivedMIDIEvent.Event == MIDI_EVENT(0, MIDI_COMMAND_NOTE_ON)) && (ReceivedMIDIEvent.Data3 > 0)){
-			if ((ReceivedMIDIEvent.Event == MIDI_EVENT(0, MIDI_COMMAND_NOTE_ON))){ 
-// ノートオン
-			    ch = ReceivedMIDIEvent.Data1 & 0x0f;
-			  	i = ReceivedMIDIEvent.Data2;
-			  	j = ReceivedMIDIEvent.Data3;
-				if(j == 0){
-					note_off_func(ch,i);
-					//break;
-				}else {
-				
-					
-						if(play_mode == 1){
+				case MIDI_EVENT(0, MIDI_COMMAND_NOTE_ON):	// ノートオン
+
+
+					ch = ReceivedMIDIEvent.Data1 & 0x0f;
+			  		i = ReceivedMIDIEvent.Data2;
+			  		j = ReceivedMIDIEvent.Data3;
+					if(j == 0){
+						note_off_func(ch,i);
+						//break;
+					}else {
+
+							if(play_mode == 1){
 							
-							f = get_voice(ch,i,j);
-							if(f != NOT_GET){
-								note_on(ch,f,i,j,midi_ch[ch].voice_no);
+								f = get_voice(ch,i,j);
+								if(f != NOT_GET){
+									note_on(ch,f,i,j,midi_ch[ch].voice_no);
+								}
+							}else if(play_mode == 3){
+								f = get_voice(ch,i,j);
+								if(f != NOT_GET){							
+									note_on(ch,f,i,j,midi_ch[ch].voice_no);
+								}
+								//_delay_ms(1);	//可変にしたら面白そう
+								//_delay_us(200);
+								if(ch < 8){
+									f = get_voice(ch+8,i,j);
+									if(f != NOT_GET){						
+										note_on(ch+8,f,i,j,midi_ch[ch+8].voice_no);
+									}
+								}
+							}else{
+								note_on(ch,ch,i,j,midi_ch[ch].voice_no);
 							}
+					}
+					break;
+				
+				
+				case MIDI_EVENT(0, MIDI_COMMAND_NOTE_OFF):	//ノートオフ
+
+					ch = ReceivedMIDIEvent.Data1 & 0x0f;
+					i = ReceivedMIDIEvent.Data2;
+					note_off_func(ch,i);
+					break;
+	
+	
+				case MIDI_EVENT(0,MIDI_COMMAND_PITCH_WHEEL_CHANGE):    /* ピッチホイールチェンジ　*/
+
+					ch = ReceivedMIDIEvent.Data1 & 0x0f;
+					j = ReceivedMIDIEvent.Data2;
+					i = ReceivedMIDIEvent.Data3;
+						
+					if(play_mode == 1){
+						change_pitchbend(ch,i,j);
+							
 						}else if(play_mode == 3){
-							f = get_voice(ch,i,j);
-							if(f != NOT_GET){							
-								note_on(ch,f,i,j,midi_ch[ch].voice_no);
-							}
-							//_delay_ms(1);	//可変にしたら面白そう
-							//_delay_us(200);
-							f = get_voice(ch+8,i,j);
-							if(f != NOT_GET){						
-								note_on(ch+8,f,i,j,midi_ch[ch+8].voice_no);
-							}
+						change_pitchbend(ch,i,j);
+						change_pitchbend(ch+8,i,j);
 						}else{
-							note_on(ch,ch,i,j,midi_ch[ch].voice_no);
-						}
-				}
-			}
-			
-			if ((ReceivedMIDIEvent.Event == MIDI_EVENT(0, MIDI_COMMAND_NOTE_OFF))){
-				//ノートオフ
-				ch = ReceivedMIDIEvent.Data1 & 0x0f;
-				i = ReceivedMIDIEvent.Data2;
-				note_off_func(ch,i);
-	
-			}
-			
-	
-	
-	
-	
-	
-	
-				if((ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_START_3BYTE))){
-					//えくるしーぶメッセージ
-			
-					// 0xf0        0xf7
+						pitch_wheel_change(ch, i , j);
+							
+					}
+					break;
 					
+					
+				case 	MIDI_EVENT(0,MIDI_COMMAND_CONTROL_CHANGE):
+				/* コントロールチェンジ メッセージ　*/
+					ch = ReceivedMIDIEvent.Data1 & 0x0f;
+					i = ReceivedMIDIEvent.Data2;   //control No
+					j = ReceivedMIDIEvent.Data3;	//value
+					
+					switch(i){
+					
+					case 11:			// エクスプレッション
+												
+						m = (j >> 2);
+						//channelExpression[ch] = m;
+						midi_ch[ch].expression = m;
+						//m = pgm_read_byte(&(divtbl[(int)m][channelPartLevel[(int)ch]]));
+						m = pgm_read_byte(&(divtbl[(int)m][(int)midi_ch[(int)ch].partlevel]));
+						k = m << 2;
+												
+						if( play_mode == 1 ){
+							change_expression(ch,k);
+							}else{
+							if_s_write(0x0B,ch);
+							if_s_write(0x10,k);
+													
+						}
+						break;
+						
+					case 1:  //モジュレーション　(depth)
+
+						j = j >>4;
+						//modulation_depth[ch] = j;
+
+						//modulation_cnt[ch] = modulation_pitch[ch];
+						if( play_mode == 1  ){
+							change_modulation(ch,j);
+							
+							
+							}else if(play_mode == 3){
+							change_modulation(ch,j);
+							change_modulation(ch+8,j);
+
+							}else{
+							if_s_write(0x0B,ch);
+							if_s_write(0x11,j);
+						}
+						break;
+						
+					case 7:		// チャンネルボリューム
+
+						m = j>> 2;
+						//channelPartLevel[ch] = m;
+						m = m >> 1;
+						midi_ch[ch].partlevel = m;
+
+
+						m = pgm_read_byte(&(divtbl[(int)m][(int) midi_ch[(int)ch].expression]));
+						k = m << 2;
+						
+						if( play_mode == 1  ){
+
+							change_part_level(ch,k);
+							
+							}else if(play_mode == 3){
+							change_part_level(ch,k);
+							change_part_level(ch+8,k);
+							}else{
+							if_s_write(0x0B,ch);
+							if_s_write(0x10,k);
+							
+						}
+						break;
+						
+					case	101:	// RPN MSB
+
+						rpn_msb[ch] = j;
+						break;
+						
+					case	100:	//RPN LSB
+
+						rpn_lsb[ch] = j;
+						
+					case	6:		//Pitch Bend Sense
+
+						if((rpn_msb[ch]==0) && (rpn_lsb[ch]==0)){
+							midi_ch[ch].pitch_sens = j;
+						}
+						break;
+						
+					case 121:	//リセットオールコントローラ
+
+						
+						setChannelDefault();
+						break;
+						
+					case	64:			//hold
+
+						if(j < 64){
+							// hold off
+							hold_off(ch);
+							}else{
+							//hold on
+							hold_on(ch);
+						}
+						break;	
+					
+					case	0:				//バンクセレクト
+
+					//j = j & 0x01;
+					//j = j ^ 0x01;
+						bank = j & 0x03;
+						break;
+					
+					case	10:				// パン
+	
+						break;
+						
+					default:
+						break;
+					}
+					
+					
+					//if(i == 60){
+						//for(l = 0;l<channelVal;l++){
+							//sin_pitch[l] = j;
+						//}
+					//}
+					//if(i == 61){
+						//for(l = 0;l<channelVal;l++){
+							//sin_tbl_offs[(int)l] = (j<<5) & 0xe0;
+							//
+						//}
+					//}
+					//if(i == 31){ //modulation sin table pitch
+						//sin_pitch[ch] = j ;
+						//if( play_mode == 1   ){
+							//sin_pitch[ch+8] = j;
+							//
+						//}
+					//}
+					//
+					//
+					//if(i == 32){ //modulation sin table pitch
+						//sin_tbl_offs[ch] = (j<<5) & 0xe0;
+						//if( play_mode == 1   ){
+							//sin_tbl_offs[ch+8] = (j<<5) & 0xe0;
+						//}
+					//}
+					
+					
+
+
+					//if(i == 76){  // モジュレーションpitch
+						//j = j >>1;
+						//modulation_pitch[ch] = j ;
+						//modulation_cnt[ch] = modulation_pitch[ch];
+					//	if( play_mode == 1  ){
+							
+							//modulation_pitch[ch+1] = j;
+							//modulation_cnt[ch+1] = modulation_pitch[ch+1];
+							//modulation_pitch[ch+2] = j;
+							//modulation_cnt[ch+2] = modulation_pitch[ch+2];
+							
+					//	}
+						
+						
+					//}
+
+
+
+					
+				break;	
+					
+					
+				case	MIDI_EVENT(0,MIDI_COMMAND_PROGRAM_CHANGE):
+
+					ch = ReceivedMIDIEvent.Data1 & 0x0f;
+					j = ReceivedMIDIEvent.Data2;
+					//f = j << 5;  //  f = j * 32;
+					l = j & 0x0f;
+				
+					if(bank == 1){
+						midi_ch[ch].voice_no = ch;				
+						/* Yamaha midi 音源のwavedata読み込み */
+						f = j * 30;
+						adr = ch * 30;
+
+						for(i = 0;i < 30;i++){
+							tone_reg[adr+i] = pgm_read_byte(&(wave825[(int)i+f]));
+						}
+						write_burst();
+
+					}else if(bank == 2){
+						j  = j & 0x1f;
+						f = j << 5;		//*32
+						adr = ch * 30;
+						for(i = 0;i < 30;i++){
+							eeprom_busy_wait();
+							tone_reg[adr+i] = eeprom_read_byte((uint8_t *)(f+i));
+						}
+						write_burst();
+					
+					}else{
+						//channelVoiceNo[ch] = l;
+						midi_ch[ch].voice_no = l;
+
+					}
+					break;
+					
+					
+				case 	MIDI_EVENT(0,MIDI_COMMAND_SYSEX_START_3BYTE):						//えくるしーぶメッセージ	
+			
 					if(ReceivedMIDIEvent.Data1 == 0xf0){
 						sysx_mes_pos = 0;
 					}
@@ -425,16 +617,20 @@ MIDI_EventPacket_t ReceivedMIDIEvent;
 					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data1;
 					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data2;
 					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data3;
+					break;
 					
-					}else if((ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_3BYTE))){
+				case 	MIDI_EVENT(0,MIDI_COMMAND_SYSEX_3BYTE):
+
 					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data1;
 					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data2;
 					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data3;
+					break;
 					
-					
-				}else 	if((ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_END_1BYTE)
-				||  ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_END_2BYTE)
-				||  ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_END_3BYTE))){
+				case	MIDI_EVENT(0,MIDI_COMMAND_SYSEX_END_1BYTE):
+				case	MIDI_EVENT(0,MIDI_COMMAND_SYSEX_END_2BYTE):	
+				case	MIDI_EVENT(0,MIDI_COMMAND_SYSEX_END_3BYTE):
+				
+
 					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data1;
 					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data2;
 					sysex_mes[sysx_mes_pos++] = ReceivedMIDIEvent.Data3;
@@ -492,300 +688,19 @@ MIDI_EventPacket_t ReceivedMIDIEvent;
 						write_burst();
 
 					}
+					break;
+					
+					default:
+						break;
+					
 					
 				}
-				
-				
-				
-	
-	
-	
-	
-	
-	
-	
-	
-	
-			
-			//if((ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_START_3BYTE))){		
-				////えくるしーぶメッセージ
-				//// message 
-				//// 0xf0  dat1,dat2,dat3,dat4 0xf7
-				//i = ReceivedMIDIEvent.Data1;
-				//if(i == 0xf0){
-					//sysex_mes[0] = i;
-					//sysex_mes[1] = ReceivedMIDIEvent.Data2;
-					//sysex_mes[2] = ReceivedMIDIEvent.Data3;
-				//}
-			//}
-			//
-			//
-//
-			//if((ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_END_1BYTE)
-			//||  ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_END_2BYTE)
-			//||  ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_SYSEX_END_3BYTE))){
-				//sysex_mes[3] = ReceivedMIDIEvent.Data1;
-				//sysex_mes[4] = ReceivedMIDIEvent.Data2;
-				//sysex_mes[5] = ReceivedMIDIEvent.Data3;
-				//ch = sysex_mes[1];
-				//i = sysex_mes[2];
-				//j = sysex_mes[3];
-				//k = sysex_mes[4];
-				//
-				//if(sysex_mes[0] == 0xf0){
-				//
-					//
-					//switch(j){ //Type
-						//case Atck:
-						//
-						//break;
-						//
-						//case Decy:
-						//
-						//break;
-						//
-						//case Sus:
-											//
-						//break;
-						//
-						//case Rel:
-						//
-						//break;
-						//
-						//case Mul:
-						//
-						//break;
-						//
-						//case Tlv:
-						//
-						//break;
-						//
-						//case Ksl:
-						//
-						//break;
-						//
-						 //
-					//}
-				//}
-			//
-			//}
-			
-			
-			/* プログラムチェンジ */
-			
-			
-			if((ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_PROGRAM_CHANGE))){
-				ch = ReceivedMIDIEvent.Data1 & 0x0f;
-				j = ReceivedMIDIEvent.Data2;	//プログラムナンバー
-				//f = j << 5;  //  f = j * 32;
-				l = j & 0x0f;
-				
-				if(bank == 1){
-					midi_ch[ch].voice_no = ch;				
-					/* Yamaha midi 音源のwavedata読み込み */
-					f = j * 30;
-					adr = ch * 30;
 
-					for(i = 0;i < 30;i++){
-						tone_reg[adr+i] = pgm_read_byte(&(wave825[(int)i+f]));
-					}
-					write_burst();
-
-				}else if(bank == 2){
-					j  = j & 0x1f;
-					f = j << 5;		//*32
-					adr = ch * 30;
-					for(i = 0;i < 30;i++){
-						eeprom_busy_wait();
-						tone_reg[adr+i] = eeprom_read_byte((uint8_t *)(f+i));
-					}
-					write_burst();
-					
-				}else{
-					//channelVoiceNo[ch] = l;
-					midi_ch[ch].voice_no = l;
-
-				}
-								
 			}
-			
-			/* ピッチホイールチェンジ　*/
-			
-			if((ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_PITCH_WHEEL_CHANGE))){
-				ch = ReceivedMIDIEvent.Data1 & 0x0f;
-				j = ReceivedMIDIEvent.Data2;
-				i = ReceivedMIDIEvent.Data3;
-				
-
-				
-				if(play_mode == 1){
-						change_pitchbend(ch,i,j);
-									
-				}else if(play_mode == 3){
-						change_pitchbend(ch,i,j);
-						change_pitchbend(ch+8,i,j);
-				}else{
-				pitch_wheel_change(ch, i , j);
-				
-				}
-			}
-			
-
-			
-			
-			/* コントロールチェンジ メッセージ　*/
-			if((ReceivedMIDIEvent.Event == MIDI_EVENT(0,MIDI_COMMAND_CONTROL_CHANGE))){
-				ch = ReceivedMIDIEvent.Data1 & 0x0f;
-				i = ReceivedMIDIEvent.Data2;   //control No
-				j = ReceivedMIDIEvent.Data3;	//value
-				
-				
-				if(i == 101){	// RPN MSB
-					rpn_msb[ch] = j;
-				}
-				if(i == 100){	//RPN LSB
-					rpn_lsb[ch] = j;
-				}
-				if(i == 6){
-					if((rpn_msb[ch]==0) && (rpn_lsb[ch]==0)){
-						midi_ch[ch].pitch_sens = j;
-					}
-				}
-				
-	
-				
-				if(i == 60){
-					for(l = 0;l<channelVal;l++){
-						sin_pitch[l] = j;
-					}
-				}
-				if(i == 61){
-					for(l = 0;l<channelVal;l++){
-						sin_tbl_offs[(int)l] = (j<<5) & 0xe0;
-						
-					}
-				}
-				if(i == 31){ //modulation sin table pitch
-					sin_pitch[ch] = j ;
-					if( play_mode == 1   ){
-						sin_pitch[ch+1] = j;
-						sin_pitch[ch+2] = j;
-					}
-				}
-				
-				
-				if(i == 32){ //modulation sin table pitch
-					sin_tbl_offs[ch] = (j<<5) & 0xe0;
-					if( play_mode == 1   ){
-						sin_tbl_offs[ch+1] = (j<<5) & 0xe0;
-						sin_tbl_offs[ch+2] = (j<<5) & 0xe0;
-					}
-				}
-				
-				
-				if(i == 121){	//リセットオールコントローラ
-				
-					setChannelDefault();
-					
-				}
-
-				if(i == 76){  // モジュレーションpitch
-				//j = j >>1;
-					//modulation_pitch[ch] = j ;
-					//modulation_cnt[ch] = modulation_pitch[ch];
-					if( play_mode == 1  ){	
-					
-							//modulation_pitch[ch+1] = j;
-							//modulation_cnt[ch+1] = modulation_pitch[ch+1];
-							//modulation_pitch[ch+2] = j;
-							//modulation_cnt[ch+2] = modulation_pitch[ch+2];
-			
-					}
-				
-				
-				}
-
-				if(i == 1){  //モジュレーション　(depth)
-					j = j >>4;
-					//modulation_depth[ch] = j;
-
-					//modulation_cnt[ch] = modulation_pitch[ch];
-					if( play_mode == 1  ){	
-						change_modulation(ch,j);	
-							
-																					
-					}else if(play_mode == 3){
-						change_modulation(ch,j);
-						change_modulation(ch+8,j);			
-
-					}else{
-						if_s_write(0x0B,ch);
-						if_s_write(0x11,j);			
-					}
-				}
-				if(i == 64){			//hold
-					if(j < 64){
-						// hold off
-						hold_off(ch);
-					}else{
-						//hold on
-						hold_on(ch);
-					}
-				}
-				
-				if(i == 10){				// パン
-
-				}else if(i == 7){			// チャンネルボリューム
-					m = j>> 2;
-					//channelPartLevel[ch] = m;
-					m = m >> 1;
-					midi_ch[ch].partlevel = m;				
-
-					//m = pgm_read_byte(&(divtbl[(int)m][ channelExpression[(int)ch]]));
-					m = pgm_read_byte(&(divtbl[(int)m][(int) midi_ch[(int)ch].expression]));
-					k = m << 2;
-			
-					if( play_mode == 1  ){
-
-						change_part_level(ch,k);
-						
-					}else if(play_mode == 3){
-						change_part_level(ch,k);
-						change_part_level(ch+8,k);
-					}else{
-						if_s_write(0x0B,ch);
-						if_s_write(0x10,k);						
-						
-					}
-
-					
-				}else if(i == 0){					//バンクセレクト
-					//j = j & 0x01;
-					//j = j ^ 0x01;
-					bank = j & 0x03;
-					
-				}else  if(i == 11){			// エクスプレッション
 		
-					m = (j >> 2);
-					//channelExpression[ch] = m;
-					midi_ch[ch].expression = m;							
-					//m = pgm_read_byte(&(divtbl[(int)m][channelPartLevel[(int)ch]]));
-					m = pgm_read_byte(&(divtbl[(int)m][(int)midi_ch[(int)ch].partlevel]));
-					k = m << 2;
-										
-					if( play_mode == 1 ){
-						change_expression(ch,k);
-					}else{
-						if_s_write(0x0B,ch);
-						if_s_write(0x10,k);						
-		
-					}
-				}
-			}
-		}
 		check_midimessage(); // 送信データチェック
 		
-		//HID_Device_USBTask(&Generic_HID_Interface);
+
 		MIDI_Device_USBTask(&Keyboard_MIDI_Interface);
 		USB_USBTask();
 	}
@@ -867,7 +782,7 @@ void EVENT_USB_Device_ConfigurationChanged(void)
 	bool ConfigSuccess = true;
 
 	ConfigSuccess &= MIDI_Device_ConfigureEndpoints(&Keyboard_MIDI_Interface);
-	//ConfigSuccess &= HID_Device_ConfigureEndpoints(&Generic_HID_Interface);
+
 	USB_Device_EnableSOFEvents();
 
 	
@@ -877,169 +792,18 @@ void EVENT_USB_Device_ConfigurationChanged(void)
 void EVENT_USB_Device_ControlRequest(void)
 {
 	MIDI_Device_ProcessControlRequest(&Keyboard_MIDI_Interface);
-	//HID_Device_ProcessControlRequest(&Generic_HID_Interface);
+
 }
 
 /** Event handler for the USB device Start Of Frame event. */
 void EVENT_USB_Device_StartOfFrame(void)
 {
-	//HID_Device_MillisecondElapsed(&Generic_HID_Interface);
+
 }
 
 
 
 
-/** HID class driver callback function for the creation of HID reports to the host.
- *
- *  \param[in]     HIDInterfaceInfo  Pointer to the HID class interface configuration structure being referenced
- *  \param[in,out] ReportID    Report ID requested by the host if non-zero, otherwise callback should set to the generated report ID
- *  \param[in]     ReportType  Type of the report to create, either HID_REPORT_ITEM_In or HID_REPORT_ITEM_Feature
- *  \param[out]    ReportData  Pointer to a buffer where the created report should be stored
- *  \param[out]    ReportSize  Number of bytes written in the report (or zero if no report is to be sent)
- *
- *  \return Boolean \c true to force the sending of the report, \c false to let the library determine if it needs to be sent
- */
-//bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDInterfaceInfo,
-                                         //uint8_t* const ReportID,
-                                         //const uint8_t ReportType,
-                                         //void* ReportData,
-                                         //uint16_t* const ReportSize)
-//{
-	//int i;
-	//uint8_t* Data        = (uint8_t*)ReportData;
-	//
-	//if(hid_res_mode == 6){
-		//for(i = 0;i<4;i++){
-//
-			//eeprom_busy_wait();
-			//Data[i] = eeprom_read_byte( (uint8_t*)(eeprom_no ++));
-			//
-		//}
-	//
-	//}
-//
-	//*ReportSize = GENERIC_REPORT_SIZE;
-	//return false;
-//}
-
-
-/** HID class driver callback function for the processing of HID reports from the host.
- *
- *  \param[in] HIDInterfaceInfo  Pointer to the HID class interface configuration structure being referenced
- *  \param[in] ReportID    Report ID of the received report from the host
- *  \param[in] ReportType  The type of report that the host has sent, either HID_REPORT_ITEM_Out or HID_REPORT_ITEM_Feature
- *  \param[in] ReportData  Pointer to a buffer where the received report has been stored
- *  \param[in] ReportSize  Size in bytes of the received HID report
- */
-//void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDInterfaceInfo,
-                                          //const uint8_t ReportID,
-                                          //const uint8_t ReportType,
-                                          //const void* ReportData,
-                                          //const uint16_t ReportSize)
-//{
-	//uint8_t* Data       = (uint8_t*)ReportData;
-	//int a,ch,adr,adr_hi,adr_lo;
-	//char c;
-	//switch(Data[0]){
-	//
-		//case 0:  // Reset
-			//
-			//switch(Data[3]){
-				//case 0:
-					//reset_ymf825();
-					//bank = 1;
-					//mem_reset();
-					//break;
-				//case 1:
-					//break;
-				//default:
-					//break;
-			//}
-			//break;
-			//
-		//case 1:		// Write Data to Register
-			//
-			//if(Data[1]==2){
-				//if_s_write(Data[2],Data[3]);
-			//}
-			//break;
-		//case 2:		// set pori mode midi channel 1 and 4
-			//
-				//if(Data[1]== 0){
-					//play_mode = 0;
-					//
-					//setChannelDefault();
-					//mem_reset();
-				//
-				//}else if(Data[1] ==1){
-					//play_mode = 1;
-					//for(a = 0;a<16;a++){
-						//midi_ch[a].voice_no = a;
-							//
-					//}
-					//setChannelDefault();
-					//mem_reset();				
-									//
-				//}else if(Data[1] == 2){
-												//
-				//}else if(Data[1] == 3){
-					//play_mode = 3;
-					//MAX_3MUL = 8;
-					//setChannelDefault();
-					//mem_reset();
-				//}
-			//break;
-			//
-		//case 3: // 4or2 operation select  Data[1]:channel  Data[2]: 2 or 4
-			//break;
-			//
-		//case 4: // algorithm select  num [0-3]4op [0-1]2op
-			//ch = (int)Data[1];
-			//c = Data[2];
-			//break;
-			//
-		//case 5: // set tone data  EEPROM YMF262 ;
-				//ch = (int)Data[1];
-				//a = (int)Data[2];
-				//c = Data[3];
-				//ch = ch << 5;
-				//a = a + ch;
-			//
-				//eeprom_busy_wait();
-				//eeprom_write_byte((uint8_t *)a,c);
-			//
-			//break;
-		//case 6:	//ready read tone data EEPROM
-			//hid_res_mode = 6;
-			//send_cnt = 30;
-			//eeprom_no = Data[1] << 5;
-			//break;
-			//
-		//case 7: // set tone data EEPROM YM2151
-			//break;	
-						//
-		//case 8: // read data from EEPROM Atmega328
-			//break;
-			//
-		//case 9: // burst write tone data
-			//write_burst();
-			//break;	
-			//
-		//case 10: //write tone array and write burst
-			//tone_reg[(Data[1]*30)+Data[2]] = Data[3];
-			//write_burst();
-			//break;	
-			//
-		//case 11: //write tone array only
-			//tone_reg[(Data[1]*30+Data[2])] = Data[3];
-			//break;
-		//
-		//default:
-			//break;
-		//
-		//}
-			//
-//}
 
 
 
@@ -1099,9 +863,8 @@ void set_timer_intrupt(void){
 #ifdef USE_C_INTRUPT
 ISR(TIMER1_COMPA_vect){
 	
-	uint8_t i,c,d;
-	signed int f;
-	int adr;
+	uint8_t i,c,d,e;
+
 	
 	for(i = 0;i < channelVal;i++){
 		
@@ -1116,8 +879,10 @@ ISR(TIMER1_COMPA_vect){
 					c &= 0x01f;
 					modulation_tblpointer[i] = c;
 					d = modulation_depth[i];
-					f = pgm_read_word(&(sin_tbl[(int)d][(int)c]));
-
+					e = pgm_read_byte(&(sin_tbl[(int)d][(int)c]));
+					e = e +midi_ch[VoiceChannel[i].midi_ch].reg_18; //PitchBend hi
+					if_s_write(0x0b,i);
+					if_s_write(0x12,e);
 				}else{
 					modulation_cnt[i] = c;
 				}

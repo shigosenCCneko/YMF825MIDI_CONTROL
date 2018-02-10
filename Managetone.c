@@ -75,7 +75,7 @@ int p_freq[] ={
 };
 */
 
-const char fnum_hi_tbl[128] PROGMEM = {
+const char fnum_hi_tbl[128]  = {
 0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x18,0x18,
 0x18,0x18,0x18,0x20,0x20,0x20,0x28,0x28,0x11,0x11,0x19,0x19,0x19,0x19,0x19,0x21,
 0x21,0x21,0x29,0x29,0x12,0x12,0x1a,0x1a,0x1a,0x1a,0x1a,0x22,0x22,0x22,0x2a,0x2a,
@@ -87,7 +87,7 @@ const char fnum_hi_tbl[128] PROGMEM = {
 
 };
 
-const char fnum_lo_tbl[128] PROGMEM = {
+const char fnum_lo_tbl[128]  = {
 0x68,0x68,0x68,0x68,0x68,0x68,0x68,0x68,0x68,0x68,0x68,0x68,0x68,0x7c,0x16,0x2b,
 0x43,0x61,0x7b,0x1d,0x3a,0x59,0x01,0x24,0x68,0x7c,0x16,0x2b,0x43,0x61,0x7b,0x1d,
 0x3a,0x59,0x01,0x24,0x68,0x7c,0x16,0x2b,0x43,0x61,0x7b,0x1d,0x3a,0x59,0x01,0x24,
@@ -147,7 +147,7 @@ int get_voice(uint8_t ch,uint8_t tone_no,uint8_t velo){
 	int voice_ch;
 	struct VoiceChannel *p;
 	
-	voice_ch = NOT_GET;
+	//voice_ch = NOT_GET;
 	p = midi_ch[ch].voice_list;
 	while(p != NULL){
 		if(p->note_no == tone_no){
@@ -155,15 +155,16 @@ int get_voice(uint8_t ch,uint8_t tone_no,uint8_t velo){
 
 				voice_ch =  p->voice_ch;
 				mute(voice_ch);			
-				break;
+				//break;
+				return voice_ch;
 			//}
 		}
 		
 		p = p->next;
-	}
-	if(voice_ch != NOT_GET){
-		return voice_ch;
-	}
+	 }
+	//if(voice_ch != NOT_GET){
+		//return voice_ch;
+	//}
 
 	
 	if(active_voice_num == MAX_VOICE_NUM){
@@ -198,14 +199,15 @@ int  return_voice(uint8_t ch,uint8_t tone_no){
 
 	
 	p = &(midi_ch[ch].voice_list);
-	voice_ch = NOT_GET;
+	//voice_ch = NOT_GET;
 	
 	while( *p != NULL){
 	
 		if( (*p)->note_no == tone_no){
 			if( midi_ch[ch].hold == TRUE){
 				(*p)->hold = TRUE;		//holdならフラグを立ててキューへ戻さない
-				break;
+				//break;
+				return NOT_GET;
 			}
 			voice_ch = (*p)->voice_ch;	
 			*p = ((*p)->next);
@@ -215,12 +217,13 @@ int  return_voice(uint8_t ch,uint8_t tone_no){
 				voice_queue_tail = 0;
 			}
 			active_voice_num--;
-			break;
+			//break;
+			return voice_ch;
 		}
 		p = &( (*p)->next);
 	}
-	return voice_ch;
-		
+	//return voice_ch;
+	return NOT_GET;	
 }
 
 
@@ -295,7 +298,7 @@ void note_on(uint8_t midich,uint8_t voicech,uint8_t i,uint8_t j,uint8_t voice_no
 	if_s_write(0x0C,j);  // #12
 
 	//i += 1;
-//
+////
 	//no = div12mod[i];
 	//block = (no & 0xf0) >> 4;
 	//noteNo = no & 0x0f;
@@ -305,14 +308,18 @@ void note_on(uint8_t midich,uint8_t voicech,uint8_t i,uint8_t j,uint8_t voice_no
 	//fnum_lo = (fnum) & 0x7f;
 	//if_s_write(0x0D,fnum_hi);
 	//if_s_write(0x0E,fnum_lo);
-	if_s_write(0x0D,pgm_read_byte(&(fnum_hi_tbl[i])));
-	if_s_write(0x0E,pgm_read_byte(&(fnum_lo_tbl[i])));
+	
+//	if_s_write(0x0D,pgm_read_byte(&(fnum_hi_tbl[i])));
+//	if_s_write(0x0E,pgm_read_byte(&(fnum_lo_tbl[i])));
+	
+	if_s_write(0x0D,fnum_hi_tbl[i]);
+	if_s_write(0x0E,fnum_lo_tbl[i]);
 	
 	if_s_write(0x10,midi_ch[midich].reg_16);
 	if_s_write(0x11,midi_ch[midich].reg_17);
 	if_s_write(0x12,midi_ch[midich].reg_18);
 	if_s_write(0x13,midi_ch[midich].reg_19);
-	if_s_write(0x14,0);
+	//if_s_write(0x14,0);
 
 //	PORTC ^= 0x80;					//LDE点滅
 

@@ -146,6 +146,7 @@ if_s_write:
 	sts send_buf_byte,r25
 	cbi 0x5,0
 	out _SFR_IO_ADDR(SPDR),r24
+//cbi _SFR_IO_ADDR(PORTC),7
 
 	sei
 	ret
@@ -161,6 +162,11 @@ ON_SEND:				//送信中、バファに積むだけ
 
 	subi r25,(-2)
 	sts  send_buf_byte,r25
+
+/*ldi r24,4
+sub r24,r25
+ori r24,0x40
+out _SFR_IO_ADDR(PORTC),r24*/
 
 	sei
 	ret			
