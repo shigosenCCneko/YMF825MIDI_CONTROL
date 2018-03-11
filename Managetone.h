@@ -26,6 +26,7 @@ struct VoiceChannel{
 	char velocity;
 	char hold;
 	struct VoiceChannel *next;
+	char release_cnt;
 
 };
 
@@ -56,5 +57,6 @@ struct MidiCH{
 
 extern struct MidiCH midi_ch[];
 extern struct VoiceChannel  ym825_voice_ch[];
+extern uint8_t rel_optval[];
 
 #endif /* MANAGETONE_H_ */

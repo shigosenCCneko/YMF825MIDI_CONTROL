@@ -69,7 +69,7 @@ void usart_spi_send(unsigned int data);
 #include "wave.h"
 #include "divtable.h"
 #include "DualMIDI.h"
-//#include "sintbl.h"
+#include "sintbl.h"
 #include "controlLine.h"
 #include "Managetone.h"
 
@@ -91,9 +91,9 @@ char channelVal;				// Channel value
 uint8_t rpn_msb[16];
 uint8_t rpn_lsb[16];
 
-char  sin_pointer[16];
-char  sin_pitch[16];
-char  sin_tbl_offs[16];
+//char  sin_pointer[16];
+//char  sin_pitch[16];
+//char  sin_tbl_offs[16];
 
 
 uint8_t play_mode = 1;			// state of channel 1 [mono,mul,hum]
@@ -108,7 +108,7 @@ int sysx_mes_pos = 0;
 
 char send_cnt = 0;
 
-
+void optimize_queue(void);
 void mem_reset(void);
 void setChannelDefault();
 
@@ -196,7 +196,7 @@ int main(void)
 	SetupHardware();
 	
 
-   
+int led_cnt;   
 	
 	GlobalInterruptEnable();
 
@@ -205,9 +205,13 @@ MIDI_EventPacket_t ReceivedMIDIEvent;
 
 	for (;;)
 	{
-		
+led_cnt++;
+if(led_cnt == 400){
+led_cnt = 0;	
+optimize_queue();
+//PORTC ^= 0x80;
+}
 
-		
 		while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent))
 		{
 			
@@ -354,13 +358,14 @@ MIDI_EventPacket_t ReceivedMIDIEvent;
 									note_on(ch,f,i,j,midi_ch[ch].voice_no);
 								}
 							}else if(play_mode == 3){
-								f = get_voice(ch,i,j);
-								if(f != NOT_GET){							
-									note_on(ch,f,i,j,midi_ch[ch].voice_no);
-								}
+								if(ch < 8){
+									f = get_voice(ch,i,j);
+									if(f != NOT_GET){							
+										note_on(ch,f,i,j,midi_ch[ch].voice_no);
+									}
 								//_delay_ms(1);	//可変にしたら面白そう
 								//_delay_us(200);
-								if(ch < 8){
+								
 									f = get_voice(ch+8,i,j);
 									if(f != NOT_GET){						
 										note_on(ch+8,f,i,j,midi_ch[ch+8].voice_no);
@@ -391,8 +396,10 @@ MIDI_EventPacket_t ReceivedMIDIEvent;
 						change_pitchbend(ch,i,j);
 							
 						}else if(play_mode == 3){
-						change_pitchbend(ch,i,j);
-						change_pitchbend(ch+8,i,j);
+							if(ch < 8){
+								change_pitchbend(ch,i,j);
+								change_pitchbend(ch+8,i,j);
+							}
 						}else{
 						pitch_wheel_change(ch, i , j);
 							
@@ -419,7 +426,14 @@ MIDI_EventPacket_t ReceivedMIDIEvent;
 												
 						if( play_mode == 1 ){
 							change_expression(ch,k);
-							}else{
+						}else if(play_mode == 3){
+							if(ch < 8){
+								change_expression(ch,k);
+								change_expression(ch+8,k);
+							}
+						
+						
+						}else{
 							if_s_write(0x0B,ch);
 							if_s_write(0x10,k);
 													
@@ -436,11 +450,12 @@ MIDI_EventPacket_t ReceivedMIDIEvent;
 							change_modulation(ch,j);
 							
 							
-							}else if(play_mode == 3){
-							change_modulation(ch,j);
-							change_modulation(ch+8,j);
-
-							}else{
+						}else if(play_mode == 3){
+							if(ch < 8){
+								change_modulation(ch,j);
+								change_modulation(ch+8,j);
+							}
+						}else{
 							if_s_write(0x0B,ch);
 							if_s_write(0x11,j);
 						}
@@ -461,10 +476,12 @@ MIDI_EventPacket_t ReceivedMIDIEvent;
 
 							change_part_level(ch,k);
 							
-							}else if(play_mode == 3){
-							change_part_level(ch,k);
-							change_part_level(ch+8,k);
-							}else{
+						}else if(play_mode == 3){
+							if(ch < 8){
+								change_part_level(ch,k);
+								change_part_level(ch+8,k);
+							}
+						}else{
 							if_s_write(0x0B,ch);
 							if_s_write(0x10,k);
 							
@@ -484,6 +501,11 @@ MIDI_EventPacket_t ReceivedMIDIEvent;
 
 						if((rpn_msb[ch]==0) && (rpn_lsb[ch]==0)){
 							midi_ch[ch].pitch_sens = j;
+							if(play_mode == 3){
+								if(ch < 8){
+									midi_ch[ch+8].pitch_sens = j;
+								}
+							}
 						}
 						break;
 						
@@ -514,59 +536,56 @@ MIDI_EventPacket_t ReceivedMIDIEvent;
 					case	10:				// パン
 	
 						break;
+/*					
+					case 59:	//if(i == 59){		//software modulation depth
+						j = ((j & 0xfc)>>1);
+						modulation_depth[ch] = j;
+						if(play_mode == 3){
+							modulation_depth[ch+8] = j;
+						}
+						break;				
+					
+					case 60://if(i == 60){
+						for(l = 0;l<channelVal;l++){
+							sin_pitch[l] = j;
+						}
+						break;
+						
+					case 61://if(i == 61){
+						for(l = 0;l<channelVal;l++){
+							sin_tbl_offs[(int)l] = (j<<5) & 0xe0;
+						}
+						break;
+						
+					case 31://if(i == 31){ //modulation sin table pitch
+						sin_pitch[ch] = j ;
+						if( play_mode == 3   ){
+							sin_pitch[ch+8] = j;
+						}
+						break;
+							
+					case 32: //if(i == 32){ //modulation sin table pitch
+						sin_tbl_offs[ch] = (j<<5) & 0xe0;
+						if( play_mode == 3   ){
+							sin_tbl_offs[ch+8] = (j<<5) & 0xe0;
+						}
+						break;
+						
+					case 76: //if(i == 76){  // モジュレーションpitch
+						modulation_pitch[ch] = j ;
+						modulation_cnt[ch] = modulation_pitch[ch];
+						if( play_mode == 3  ){
+						
+							modulation_pitch[ch+8] = j;
+							modulation_cnt[ch+8] = modulation_pitch[ch+1];
+						}
+						break;
+	*/					
 						
 					default:
 						break;
-					}
+					}		//controll change swich end
 					
-					
-					//if(i == 60){
-						//for(l = 0;l<channelVal;l++){
-							//sin_pitch[l] = j;
-						//}
-					//}
-					//if(i == 61){
-						//for(l = 0;l<channelVal;l++){
-							//sin_tbl_offs[(int)l] = (j<<5) & 0xe0;
-							//
-						//}
-					//}
-					//if(i == 31){ //modulation sin table pitch
-						//sin_pitch[ch] = j ;
-						//if( play_mode == 1   ){
-							//sin_pitch[ch+8] = j;
-							//
-						//}
-					//}
-					//
-					//
-					//if(i == 32){ //modulation sin table pitch
-						//sin_tbl_offs[ch] = (j<<5) & 0xe0;
-						//if( play_mode == 1   ){
-							//sin_tbl_offs[ch+8] = (j<<5) & 0xe0;
-						//}
-					//}
-					
-					
-
-
-					//if(i == 76){  // モジュレーションpitch
-						//j = j >>1;
-						//modulation_pitch[ch] = j ;
-						//modulation_cnt[ch] = modulation_pitch[ch];
-					//	if( play_mode == 1  ){
-							
-							//modulation_pitch[ch+1] = j;
-							//modulation_cnt[ch+1] = modulation_pitch[ch+1];
-							//modulation_pitch[ch+2] = j;
-							//modulation_cnt[ch+2] = modulation_pitch[ch+2];
-							
-					//	}
-						
-						
-					//}
-
-
 
 					
 				break;	
@@ -588,6 +607,7 @@ MIDI_EventPacket_t ReceivedMIDIEvent;
 						for(i = 0;i < 30;i++){
 							tone_reg[adr+i] = pgm_read_byte(&(wave825[(int)i+f]));
 						}
+						
 						write_burst();
 
 					}else if(bank == 2){
@@ -749,6 +769,7 @@ _delay_ms(100);
 	startup_sound();
 	
 	setChannelDefault();
+//set_timer_intrupt();
 }
 void keyon(unsigned char fnumh, unsigned char fnuml){
 	if_s_write( 0x0B, 0x00 );//voice num
@@ -819,13 +840,13 @@ void setChannelDefault(){
 		rpn_msb[i] = 127;
 		rpn_lsb[i] = 127;
 	
-		//modulation_depth[i] = 20;
-		///modulation_pitch[i] = 21;	//modulation の周期
-		//modulation_cnt[i] = 0;    //modulation の減算カウンタ
-		//modulation_tblpointer[i] = 0;
-		sin_pointer[i] = 0;
-		sin_pitch[i] = 3;
-		sin_tbl_offs[i] = (7<< 5);
+//modulation_depth[i] = 20;
+//modulation_pitch[i] = 21;	//modulation の周期
+//modulation_cnt[i] = 0;    //modulation の減算カウンタ
+//modulation_tblpointer[i] = 0;
+		//sin_pointer[i] = 0;
+		//sin_pitch[i] = 3;
+		//sin_tbl_offs[i] = (7<< 5);
 	}
 
 	init_midich();
@@ -862,25 +883,27 @@ void set_timer_intrupt(void){
 
 #ifdef USE_C_INTRUPT
 ISR(TIMER1_COMPA_vect){
-	
+
 	uint8_t i,c,d,e;
 
 	
 	for(i = 0;i < channelVal;i++){
 		
-			c = modulation_cnt[i];	
+			//c = modulation_cnt[i];	
 
 			if(c != 0){
 				c--;
 				if(c == 0){
-					modulation_cnt[i] = modulation_pitch[i];
-					c = modulation_tblpointer[i];
+	//PORTC ^= 0x80;					
+					//modulation_cnt[i] = modulation_pitch[i];
+					//c = modulation_tblpointer[i];
 					c++;
 					c &= 0x01f;
 					modulation_tblpointer[i] = c;
 					d = modulation_depth[i];
 					e = pgm_read_byte(&(sin_tbl[(int)d][(int)c]));
-					e = e +midi_ch[VoiceChannel[i].midi_ch].reg_18; //PitchBend hi
+
+					e = e +midi_ch[ym825_voice_ch[i].midi_ch].reg_18; //PitchBend hi
 					if_s_write(0x0b,i);
 					if_s_write(0x12,e);
 				}else{

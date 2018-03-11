@@ -10,6 +10,7 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include "controlLine.h"
+#include "Managetone.h"
 
 
 
@@ -23,6 +24,8 @@ void flush_spi_buff(void);
 //volatile uint8_t send_buf_byte = 0;
 extern volatile uint8_t send_buf_byte;
 extern char tone_reg[480];
+extern char career_no[8][4];
+extern char career_val[8];
 
 /*
 // SPI‘—MŠ®—¹Š„‚è‚İ
@@ -96,6 +99,8 @@ void send_atmega(char c){
 }
 
 void write_burst(){
+	int voice_top_addr;
+	char k,l,m,alg;
 	int i;
 	char *tone;
 	tone = tone_reg;
@@ -125,5 +130,24 @@ void write_burst(){
 
 	wr_hi();
 	sei();
+	voice_top_addr = 0;
+	for(i = 0;i < 16;i++){
+		alg = tone_reg[voice_top_addr + 1] & 0x07;	//get algorithm no
+		l = career_val[alg];
+	
+		k = 255;
+		while(l != 0){
+			l--;
+			m = career_no[alg][l];
+			m = tone_reg[voice_top_addr + m * 7 + 3]  & 0xf0; // get release late * 16
+			if(m<k)
+			k = m;
+		
+		}
+		rel_optval[i] = ((240-k)>>6);
+		voice_top_addr += 30;
+	}
+
+
 }
 
